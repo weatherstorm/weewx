@@ -35,14 +35,14 @@ class ScalarStats(object):
     def setStats(self, stats_tuple=None):
         (self.min, self.mintime,
          self.max, self.maxtime,
-         self.sum, self.count,
+         self._sum, self.count,
          self.wsum,self.sumtime) = stats_tuple if stats_tuple else ScalarStats.default_init
          
     def getStatsTuple(self):
         """Return a stats-tuple. That is, a tuple containing the gathered statistics.
         This tuple can be used to update the stats database"""
         return (self.min, self.mintime, self.max, self.maxtime, 
-                self.sum, self.count, self.wsum, self.sumtime)
+                self._sum, self.count, self.wsum, self.sumtime)
     
     def mergeHiLo(self, x_stats):
         """Merge the highs and lows of another accumulator into myself."""
@@ -61,7 +61,7 @@ class ScalarStats(object):
 
     def mergeSum(self, x_stats):
         """Merge the sum and count of another accumulator into myself."""
-        self.sum     += x_stats.sum
+        self._sum    += x_stats._sum
         self.count   += x_stats.count
         self.wsum    += x_stats.wsum
         self.sumtime += x_stats.sumtime
@@ -85,7 +85,7 @@ class ScalarStats(object):
     def addSum(self, val, weight=1):
         """Add a scalar value to my running sum and count."""
         if val is not None:
-            self.sum     += val
+            self._sum    += val
             self.count   += 1
             self.wsum    += val * weight
             self.sumtime += weight
@@ -94,6 +94,14 @@ class ScalarStats(object):
     def avg(self):
         return self.wsum / self.sumtime if self.count else None
 
+    @property
+    def sum(self):
+        return self._sum if self.count else None
+ 
+#===============================================================================
+#                             VectorStats
+#===============================================================================
+       
 class VecStats(object):
     """Accumulates statistics for a vector value.
      
@@ -111,7 +119,7 @@ class VecStats(object):
     def setStats(self, stats_tuple=None):
         (self.min, self.mintime,
          self.max, self.maxtime,
-         self.sum, self.count,
+         self._sum, self.count,
          self.wsum,self.sumtime,
          self.max_dir, self.xsum, self.ysum, 
          self.dirsumtime, self.squaresum, 
@@ -121,7 +129,7 @@ class VecStats(object):
         """Return a stats-tuple. That is, a tuple containing the gathered statistics."""
         return (self.min, self.mintime,
                 self.max, self.maxtime,
-                self.sum, self.count,
+                self._sum, self.count,
                 self.wsum,self.sumtime,
                 self.max_dir, self.xsum, self.ysum, 
                 self.dirsumtime,  self.squaresum, self.wsquaresum)
@@ -144,7 +152,7 @@ class VecStats(object):
  
     def mergeSum(self, x_stats):
         """Merge the sum and count of another accumulator into myself."""
-        self.sum        += x_stats.sum
+        self._sum       += x_stats._sum
         self.count      += x_stats.count
         self.wsum       += x_stats.wsum
         self.sumtime    += x_stats.sumtime
@@ -178,7 +186,7 @@ class VecStats(object):
         """
         speed, dirN = val
         if speed is not None:
-            self.sum         += speed
+            self._sum        += speed
             self.count       += 1
             self.wsum        += weight * speed
             self.sumtime     += weight
@@ -192,6 +200,10 @@ class VecStats(object):
     @property
     def avg(self):
         return self.wsum / self.sumtime if self.count else None
+ 
+    @property
+    def sum(self):
+        return self._sum if self.count else None
  
     @property
     def rms(self):
