@@ -19,8 +19,8 @@ from weewx.units import CtoF, mps_to_mph, kph_to_mph, METER_PER_FOOT
 class StdWXCalculate(weewx.engine.StdService):
     """Wrapper class for WXCalculate.
 
-    A StdService wrapper for a WXCalculate object so it may be called as a 
-    service. This also allows the WXCalculate class to be used elsewhere 
+    A StdService wrapper for a WXCalculate object so it may be called as a
+    service. This also allows the WXCalculate class to be used elsewhere
     without the overheads of running it as a weewx service.
     """
 
@@ -31,9 +31,9 @@ class StdWXCalculate(weewx.engine.StdService):
         """
         super(StdWXCalculate, self).__init__(engine, config_dict)
 
-        self.calc = WXCalculate(config_dict, 
-                                engine.stn_info.altitude_vt, 
-                                engine.stn_info.latitude_f, 
+        self.calc = WXCalculate(config_dict,
+                                engine.stn_info.altitude_vt,
+                                engine.stn_info.latitude_f,
                                 engine.stn_info.longitude_f,
                                 engine.db_binder)
 
@@ -102,7 +102,7 @@ class WXCalculate(object):
                 altimeter = aaASOS
                 maxSolarRad = RS
         """
-        
+
         # get any configuration settings
         svc_dict = config_dict.get('StdWXCalculate', {'Calculations':{}})
         # if there is no Calculations section, then make an empty one
@@ -269,8 +269,8 @@ class WXCalculate(object):
                     if e[0] > data['dateTime'] - self.rain_period:
                         events.append((e[0], e[1]))
                 self.rain_events = events
-            # ...then add new rain event if there is one
-            if 'rain' in data and data['rain']:
+            # ...then add new rain event (including rain == 0) if there is one
+            if 'rain' in data and data['rain'] is not None:
                 self.rain_events.append((data['dateTime'], data['rain']))
         elif data_type == 'archive':
             # punt any old events from the archive event list...
@@ -280,21 +280,27 @@ class WXCalculate(object):
                     if e[0] > data['dateTime'] - self.rain_period:
                         events.append((e[0], e[1]))
                 self.archive_rain_events = events
-            # ...then add new rain event if there is one
-            if 'rain' in data and data['rain']:
+            # ...then add new rain event (including rain == 0) if there is one
+            if 'rain' in data and data['rain'] is not None:
                 self.archive_rain_events.append((data['dateTime'], data['rain']))
         # for both loop and archive, add up the rain...
         rainsum = 0
+        syslog.syslog(syslog.LOG_INFO, "wxcalculate: self.rain_events=%s" % (self.rain_events, ))
         if len(self.rain_events) != 0:
             # we have loop rain events so add them up
             for e in self.rain_events:
                 rainsum += e[1]
-        elif data_type == 'archive':
-            # no loop rain events but do we have any archive rain events
+        elif data_type == 'archive' and rainsum == 0:
+            # no loop rain but do we have any archive rain events
             for e in self.archive_rain_events:
                 rainsum += e[1]
-        # ...then divide by the period and scale to an hour
-        data['rainRate'] = 3600 * rainsum / self.rain_period
+        # .. if we have loop or archive rain events then divide by the period
+        # and scale to an hour, if we have no rain events at all then return
+        # None
+        if len(self.rain_events) != 0 or len(self.archive_rain_events) != 0:
+            data['rainRate'] = 3600 * rainsum / self.rain_period
+        else:
+            data['rainRate'] = None
 
     def calc_maxSolarRad(self, data, data_type):  # @UnusedVariable
         algo = self.algorithms.get('maxSolarRad', 'RS')
@@ -309,7 +315,7 @@ class WXCalculate(object):
 
     def calc_cloudbase(self, data, data_type):  # @UnusedVariable
         data['cloudbase'] = None
-        if 'outTemp' in data and 'outHumidity' in data:        
+        if 'outTemp' in data and 'outHumidity' in data:
             data['cloudbase'] = weewx.wxformulas.cloudbase_US(
                 data['outTemp'], data['outHumidity'], self.altitude_ft)
 
@@ -372,10 +378,10 @@ class WXCalculate(object):
             # Wind height is in meters, so convert it:
             height_ft = self.wind_height / METER_PER_FOOT
 
-            ET_rate = weewx.wxformulas.evapotranspiration_US(T_min, T_max, 
-                                                             rh_min, rh_max, 
-                                                             rad_avg, wind_avg, height_ft, 
-                                                             self.latitude, self.longitude, self.altitude_ft, 
+            ET_rate = weewx.wxformulas.evapotranspiration_US(T_min, T_max,
+                                                             rh_min, rh_max,
+                                                             rad_avg, wind_avg, height_ft,
+                                                             self.latitude, self.longitude, self.altitude_ft,
                                                              end_ts)
             # The formula returns inches/hour. We need the total ET over the archive
             # interval, so multiply by the length of the archive interval in hours.
