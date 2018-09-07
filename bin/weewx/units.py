@@ -134,7 +134,8 @@ obs_group_dict = ListOfDicts({"altitude"           : "group_altitude",
                               "consBatteryVoltage" : "group_volt",
                               "heatingVoltage"     : "group_volt",
                               "referenceVoltage"   : "group_volt",
-                              "supplyVoltage"      : "group_volt"})
+                              "supplyVoltage"      : "group_volt",
+                              "lux"                : "group_illuminance"})
 
 # Some aggregations when applied to a type result in a different unit
 # group. This data structure maps aggregation type to the group:
@@ -165,6 +166,7 @@ USUnits = ListOfDicts({"group_altitude"    : "foot",
                        "group_distance"    : "mile",
                        "group_elapsed"     : "second",
                        "group_energy"      : "watt_hour",
+                       "group_illuminance" : "ftcd",
                        "group_interval"    : "minute",
                        "group_length"      : "inch",
                        "group_moisture"    : "centibar",
@@ -194,6 +196,7 @@ MetricUnits = ListOfDicts({"group_altitude"    : "meter",
                            "group_distance"    : "km",
                            "group_elapsed"     : "second",
                            "group_energy"      : "watt_hour",
+                           "group_illuminance" : "lx",
                            "group_interval"    : "minute",
                            "group_length"      : "cm",
                            "group_moisture"    : "centibar",
@@ -297,7 +300,9 @@ conversionDict = {
       'bit'              : {'byte'             : lambda x : x / 8},
       'byte'             : {'bit'              : lambda x : x * 8},
       'km'               : {'mile'             : lambda x : x * 0.621371192},
-      'mile'             : {'km'               : lambda x : x * 1.609344}}
+      'mile'             : {'km'               : lambda x : x * 1.609344},
+      'ftcd'             : {'lx'               : lambda x : x * 10.76391},
+      'lux'              : {'ftcd'             : lambda x : x / 10.76391}}
 
 # Default unit formatting when nothing specified in skin configuration file
 default_unit_format_dict = {"amp"                : "%.1f",
@@ -326,6 +331,7 @@ default_unit_format_dict = {"amp"                : "%.1f",
                             "knot"               : "%.0f",
                             "knot2"              : "%.1f",
                             "litre"              : "%.1f",
+                            "lx"                 : "%.1f",
                             "mbar"               : "%.1f",
                             "meter"              : "%.0f",
                             "meter_per_second"   : "%.0f",
@@ -372,6 +378,7 @@ default_unit_label_dict = { "amp"               : " amp",
                             "knot"              : " knots",
                             "knot2"             : " knots",
                             "litre"             : " l",
+                            "lx"                : " lx",
                             "mbar"              : " mbar",
                             "meter"             : " meters",
                             "meter_per_second"  : " m/s",
