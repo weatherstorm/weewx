@@ -134,8 +134,11 @@ obs_group_dict = ListOfDicts({"altitude"           : "group_altitude",
                               "consBatteryVoltage" : "group_volt",
                               "heatingVoltage"     : "group_volt",
                               "referenceVoltage"   : "group_volt",
-                              "supplyVoltage"      : "group_volt",
-                              "lux"                : "group_illuminance"})
+                              "lightningStrikes"   : "group_lightning",
+			      "lightningAvgDistance"   : "group_distance",
+			      "lightningDistance"  : "group_distance",
+			      "supplyVoltage"      : "group_volt",
+			      "lux"                : "group_light"})
 
 # Some aggregations when applied to a type result in a different unit
 # group. This data structure maps aggregation type to the group:
@@ -166,9 +169,10 @@ USUnits = ListOfDicts({"group_altitude"    : "foot",
                        "group_distance"    : "mile",
                        "group_elapsed"     : "second",
                        "group_energy"      : "watt_hour",
-                       "group_illuminance" : "ftcd",
                        "group_interval"    : "minute",
                        "group_length"      : "inch",
+ 		       "group_light"       : "ftcd",
+		       "group_lightning"   : "ltg_strike",
                        "group_moisture"    : "centibar",
                        "group_percent"     : "percent",
                        "group_power"       : "watt",
@@ -196,9 +200,10 @@ MetricUnits = ListOfDicts({"group_altitude"    : "meter",
                            "group_distance"    : "km",
                            "group_elapsed"     : "second",
                            "group_energy"      : "watt_hour",
-                           "group_illuminance" : "lx",
                            "group_interval"    : "minute",
                            "group_length"      : "cm",
+			   "group_light"       : "lx",
+			   "group_lightning"   : "ltg_strike",
                            "group_moisture"    : "centibar",
                            "group_percent"     : "percent",
                            "group_power"       : "watt",
@@ -301,8 +306,8 @@ conversionDict = {
       'byte'             : {'bit'              : lambda x : x * 8},
       'km'               : {'mile'             : lambda x : x * 0.621371192},
       'mile'             : {'km'               : lambda x : x * 1.609344},
-      'ftcd'             : {'lx'               : lambda x : x * 10.76391},
-      'lux'              : {'ftcd'             : lambda x : x / 10.76391}}
+      'lx'               : {'ftcd'             : lambda x : x * 10.7639104167},
+      'ftcd'             : {'lx'               : lambda x : x / 10.7639104167}}
 
 # Default unit formatting when nothing specified in skin configuration file
 default_unit_format_dict = {"amp"                : "%.1f",
@@ -319,6 +324,7 @@ default_unit_format_dict = {"amp"                : "%.1f",
                             "degree_F_day"       : "%.1f",
                             "degree_compass"     : "%.0f",
                             "foot"               : "%.0f",
+			    "ftcd"               : "%.2f",
                             "gallon"             : "%.1f",
                             "hPa"                : "%.1f",
                             "hour"               : "%.1f",
@@ -331,7 +337,8 @@ default_unit_format_dict = {"amp"                : "%.1f",
                             "knot"               : "%.0f",
                             "knot2"              : "%.1f",
                             "litre"              : "%.1f",
-                            "lx"                 : "%.1f",
+			    "lightning"          : "%.1f",
+			    "lx"                 : "%.0f",
                             "mbar"               : "%.1f",
                             "meter"              : "%.0f",
                             "meter_per_second"   : "%.0f",
@@ -366,6 +373,7 @@ default_unit_label_dict = { "amp"               : " amp",
                             "degree_F_day"      : "\xc2\xb0F-day",
                             "degree_compass"    : "\xc2\xb0",
                             "foot"              : " feet",
+			    "ftcd"	      	: " ftcd",
                             "gallon"            : " gal",
                             "hPa"               : " hPa",
                             "inHg"              : " inHg",
@@ -378,7 +386,8 @@ default_unit_label_dict = { "amp"               : " amp",
                             "knot"              : " knots",
                             "knot2"             : " knots",
                             "litre"             : " l",
-                            "lx"                : " lx",
+			    "ltg_strike"        : "",
+			    "lx"                : " lx",
                             "mbar"              : " mbar",
                             "meter"             : " meters",
                             "meter_per_second"  : " m/s",
@@ -472,19 +481,19 @@ class Formatter(object):
     >>> os.environ['TZ'] = 'America/Los_Angeles'
     >>> f = Formatter()
     >>> print f.toString((20.0, "degree_C", "group_temperature"))
-    20.0째C
+    20.0캜
     >>> print f.toString((83.2, "degree_F", "group_temperature"))
-    83.2째F
+    83.2캟
     >>> # Try the Spanish locale, which will use comma decimal separators.
     >>> # For this to work, the Spanish locale must have been installed.
     >>> # You can do this with the command:
     >>> #     sudo locale-gen es_ES.UTF-8 && sudo update-locale
     >>> x = locale.setlocale(locale.LC_NUMERIC, 'es_ES.utf-8')
     >>> print f.toString((83.2, "degree_F", "group_temperature"), localize=True)
-    83,2째F
+    83,2캟
     >>> # Try it again, but overriding the localization:
     >>> print f.toString((83.2, "degree_F", "group_temperature"), localize=False)
-    83.2째F
+    83.2캟
     >>> # Set locale back to default
     >>> x = locale.setlocale(locale.LC_NUMERIC, '')
     >>> print f.toString((123456789,  "unix_epoch", "group_time"))
@@ -862,16 +871,16 @@ class ValueHelper(object):
     >>> # Use the default converter and formatter:
     >>> vh = ValueHelper(value_t)
     >>> print vh
-    68.0째F
+    68.0캟
     
     Try explicit unit conversion:
     >>> print vh.degree_C
-    20.0째C
+    20.0캜
     
     Do it again, but using a converter:
     >>> vh = ValueHelper(value_t, converter=Converter(MetricUnits))
     >>> print vh
-    20.0째C
+    20.0캜
     
     Extract just the raw value:
     >>> print "%.1f" % vh.raw
